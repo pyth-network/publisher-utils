@@ -71,6 +71,7 @@ export class PythConnection {
   
   private handleAccount(key: PublicKey, account: AccountInfo<Buffer>, productOnly: boolean) {
     const base = parseBaseData(account.data)
+    // The pyth program owns accounts that don't contain pyth data, which we can safely ignore.
     if (base) {
       switch (base.type) {
         case PC_ACCTYPE_MAPPING:
@@ -89,8 +90,6 @@ export class PythConnection {
         default:
           throw new Error(`Unknown account type: ${base.type}. Try upgrading pyth-client.`)
       }
-    } else {
-      throw new Error("Account data was not a pyth account (magic number mismatch). Did you pass the correct program key?")
     }
   }
 
