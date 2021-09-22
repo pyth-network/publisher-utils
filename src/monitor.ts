@@ -3,7 +3,7 @@
 // add some notification schemes
 
 import {Connection, PublicKey, clusterApiUrl, Cluster, Commitment} from '@solana/web3.js';
-import { PythConnection } from './PythConnection'
+import { PythConnection, getPythProgramKey } from './PythConnection'
 
 require('dotenv').config()
 
@@ -15,8 +15,7 @@ console.log(
   `Connecting to ${SOLANA_CLUSTER_URL} with commitment ${SOLANA_CONNECTION_COMMITMENT}`
 )
 
-// TODO: the network -> program key mapping should be stored in the pyth-client repo somewhere
-const PYTH_PROGRAM_KEY = new PublicKey(process.env.PYTH_PROGRAM_KEY!)
+const PYTH_PROGRAM_KEY = getPythProgramKey(SOLANA_CLUSTER_NAME)
 
 const connection = new Connection(
   SOLANA_CLUSTER_URL,

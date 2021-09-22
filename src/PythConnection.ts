@@ -1,4 +1,4 @@
-import {Connection, PublicKey, clusterApiUrl, Commitment, AccountInfo, Account} from '@solana/web3.js'
+import {Connection, PublicKey, clusterApiUrl, Cluster, Commitment, AccountInfo, Account} from '@solana/web3.js'
 import {
   Base, Magic,
   parseMappingData,
@@ -7,8 +7,7 @@ import {
   Version,
 } from '@pythnetwork/client'
 
-// program key FsJ3A3u2vn5cTVofAjvy6y5kwABJAqYWpe4975bi2epH
-// TODO: This entire file should be moved into pyth-client
+// TODO: this entire file should be moved into pyth-client
 
 const ONES = '11111111111111111111111111111111'
 
@@ -17,6 +16,14 @@ const PC_ACCTYPE_PRODUCT=2
 const PC_ACCTYPE_PRICE=3
 const PC_ACCTYPE_TEST=4
 
+const networkNameToPythProgramKey: Record<Cluster, string> = {
+  'mainnet-beta': 'FsJ3A3u2vn5cTVofAjvy6y5kwABJAqYWpe4975bi2epH',
+  'devnet': 'gSbePebfvPy7tRqimPoVecS2UsBvYv46ynrzWocc92s',
+  'testnet': '8tfDNiaEyrV6Q1U4DEXrEigs9DoDtkugzFbybENEbCDz',
+}
+export function getPythProgramKey(networkName: Cluster): PublicKey {
+  return new PublicKey(networkNameToPythProgramKey[networkName]);
+}
 
 function parseBaseData(data: Buffer): Base | undefined {
   // NOTE: this should work if buffer is empty.
@@ -60,7 +67,7 @@ export class PythConnection {
     if (product === undefined) {
       // This shouldn't happen since we're subscribed to all of the program's accounts,
       // but let's be good defensive programmers.
-      throw new Error("Got a price update for an unknown product. This is a bug in the library, please report it to the developers.")
+      throw new Error('Got a price update for an unknown product. This is a bug in the library, please report it to the developers.')
     }
 
     const priceData = parsePriceData(account.data)
