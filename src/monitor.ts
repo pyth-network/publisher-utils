@@ -2,15 +2,8 @@
 // get price updates, check isValid
 // add some notification schemes
 
-const { Connection, PublicKey, clusterApiUrl } = require('@solana/web3.js')
-const {
-  parseMappingData,
-  parsePriceData,
-  parseProductData,
-  Version,
-} = require('@pythnetwork/client')
-const { gzip } = require('zlib')
-const db = require('./db.js')
+import { Connection, PublicKey, clusterApiUrl } from '@solana/web3.js';
+import { PythConnection } from './subscription'
 
 require('dotenv').config()
 
