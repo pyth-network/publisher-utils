@@ -11,10 +11,18 @@ import {
 
 const ONES = '11111111111111111111111111111111'
 
-const PC_ACCTYPE_MAPPING=1
-const PC_ACCTYPE_PRODUCT=2
-const PC_ACCTYPE_PRICE=3
-const PC_ACCTYPE_TEST=4
+// TODO: rename these constants
+export const PC_ACCTYPE_MAPPING = 1
+export const PC_ACCTYPE_PRODUCT = 2
+export const PC_ACCTYPE_PRICE = 3
+export const PC_ACCTYPE_TEST = 4
+
+export const PC_STATUS_UNKNOWN = 0
+export const PC_STATUS_TRADING = 1
+export const PC_STATUS_HALTED = 2
+export const PC_STATUS_AUCTION = 3
+
+export const PC_MAX_SLOT_DIFFERENCE = 25
 
 const networkNameToPythProgramKey: Record<Cluster, string> = {
   'mainnet-beta': 'FsJ3A3u2vn5cTVofAjvy6y5kwABJAqYWpe4975bi2epH',
