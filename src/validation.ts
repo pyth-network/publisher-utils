@@ -15,7 +15,7 @@ export function checkValidity(product: Product, price: PriceData, publisherPrice
     // Either the quoter's price is wrong, or their confidence interval is too small.
     const delta = publisherPrice.aggregate.price - price.price;
     const ciNormalizedDelta = delta / publisherPrice.aggregate.confidence
-    if (Math.abs(ciNormalizedDelta) > 10) {
+    if (Math.abs(ciNormalizedDelta) > 20) {
       return "improbable-aggregate";
     }
 

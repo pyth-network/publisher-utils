@@ -27,5 +27,13 @@ By default, the script will alert if any publisher's activity is suspicious. If 
 to a specific publisher, please set the `PUBLISHER_KEY` variable in your environment or `.env` file.
 See `.env.sample` for more documentation on configuration options.
 
+The monitoring script will log an output whenever a publisher starts or stops publishing to a specific product.
+It also publishes the following alerts:
+
+1. `bad-confidence` - a publisher published a confidence of 0
+2. `price-deviation` - a published price is greater than 10% away from the aggregate price
+3. `improbable-aggregate` - a publisher's price/confidence is such that the aggregate price is more than 20 sigma away.
+
+
 At the moment, this script sends alerts to stdout.
 If you would like notifications via another medium (e.g., Slack), please let us know!
