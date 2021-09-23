@@ -19,8 +19,8 @@ export function checkValidity(product: Product, price: PriceData, publisherPrice
       return "improbable-aggregate";
     }
 
-    // The published price is more than 10% away from the aggregate price
-    if (Math.abs(delta / price.price) > 0.1) {
+    // The published price is more than 15% away from the aggregate price
+    if (Math.abs(delta / price.price) > 0.15) {
       return "price-deviation";
     }
   }
