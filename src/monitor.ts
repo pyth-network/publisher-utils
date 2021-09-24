@@ -1,7 +1,7 @@
 import {Connection, PublicKey, clusterApiUrl, Cluster, Commitment, AccountInfo, Context} from '@solana/web3.js';
 import { PythConnection, getPythProgramKey } from './PythConnection'
 import {checkValidity, isPublishing} from "./validation";
-import {PriceComponent, PriceData, Product} from "@pythnetwork/client";
+import {PriceData, Product} from "@pythnetwork/client";
 
 require('dotenv').config()
 
@@ -26,7 +26,7 @@ const HIT_RATE_MOVING_AVG_MULTIPLE = 0.95
 const HIT_RATE_ALERT_THRESHOLD = 0.3
 // The low balance alert will go off each time a wallet balance drops below one of these thresholds.
 // Must be in sorted order from low to high
-const LOW_BALANCE_THRESHOLDS_SOL=[5, 10, 25, 50, 64.75, 75, 100]
+const LOW_BALANCE_THRESHOLDS_SOL=[5, 10, 25, 50, 75, 100]
 
 function handlePriceChange(product: Product, price: PriceData) {
   for (let publisherPrice of price.priceComponents) {
