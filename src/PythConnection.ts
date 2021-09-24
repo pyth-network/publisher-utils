@@ -137,6 +137,7 @@ export class PythConnection {
   public async stop() {
     // There's no way to actually turn off the solana web3 subscription x_x, but there should be.
     // Leave this method in so we don't have to update our API when solana fixes theirs.
+    // In the interim, delete callbacks.
+    this.callbacks = []
   }
-
 }

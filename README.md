@@ -33,7 +33,9 @@ It also publishes the following alerts:
 1. `bad-confidence` -- a publisher published a confidence of 0
 2. `price-deviation` -- a published price is greater than 15% away from the aggregate price
 3. `improbable-aggregate` -- a publisher's price/confidence is such that the aggregate price is more than 20 sigma away.
-4. `low-slot-hit-rate` -- a publisher is active for a product, but publishing a price for < 30% of slots. 
+4. `low-slot-hit-rate` -- a publisher is active for a product, but publishing a price for < 30% of slots.
+5. `low-balance` -- a publisher's account balance is low. This alert fires when the account balance drops below 
+                    100, 75, 50, 25, 10, and 5 SOL.
 
 At the moment, this script sends alerts to stdout.
 If you would like notifications via another medium (e.g., Slack), please let us know!

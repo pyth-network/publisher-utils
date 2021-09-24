@@ -1,4 +1,4 @@
-import {Connection, PublicKey, clusterApiUrl, Cluster, Commitment} from '@solana/web3.js';
+import {Connection, PublicKey, clusterApiUrl, Cluster, Commitment, AccountInfo, Context} from '@solana/web3.js';
 import { PythConnection, getPythProgramKey } from './PythConnection'
 import {checkValidity, isPublishing} from "./validation";
 import {PriceComponent, PriceData, Product} from "@pythnetwork/client";
@@ -23,6 +23,10 @@ const pythConnection = new PythConnection(connection, PYTH_PROGRAM_KEY, SOLANA_C
 const publisherStatus: Record<string, Record<string, boolean>> = {}
 const publisherHitRateMovingAvg: Record<string, Record<string, {slot: bigint, avg: number}>> = {}
 const HIT_RATE_MOVING_AVG_MULTIPLE = 0.95
+const HIT_RATE_ALERT_THRESHOLD = 0.3
+// The low balance alert will go off each time a wallet balance drops below one of these thresholds.
+// Must be in sorted order from low to high
+const LOW_BALANCE_THRESHOLDS_SOL=[5, 10, 25, 50, 64.75, 75, 100]
 
 function handlePriceChange(product: Product, price: PriceData) {
   for (let publisherPrice of price.priceComponents) {
@@ -31,6 +35,13 @@ function handlePriceChange(product: Product, price: PriceData) {
       if (!(currentPublisherKey in publisherStatus)) {
         publisherStatus[currentPublisherKey] = {}
         publisherHitRateMovingAvg[currentPublisherKey] = {}
+
+        // The first time we see a publisher, subscribe to updates on their account as well so we can track their balance.
+        connection.onAccountChange(
+          new PublicKey(currentPublisherKey),
+          (info, context) => handlePublisherAccountChange(currentPublisherKey, info, context),
+          SOLANA_CONNECTION_COMMITMENT
+        )
       }
 
       const isActive = isPublishing(price, publisherPrice)
@@ -38,9 +49,9 @@ function handlePriceChange(product: Product, price: PriceData) {
 
       if (wasActive !== undefined && wasActive != isActive) {
         if (isActive) {
-          console.log(`${(new Date()).toISOString()} Started publishing ${product.symbol} ${currentPublisherKey}`)
+          console.log(`${(new Date()).toISOString()} start-publish ${product.symbol} ${currentPublisherKey}`)
         } else {
-          console.log(`${(new Date()).toISOString()} Stopped publishing ${product.symbol} ${currentPublisherKey}`)
+          console.log(`${(new Date()).toISOString()} stop-publish ${product.symbol} ${currentPublisherKey}`)
         }
       }
 
@@ -67,7 +78,7 @@ function handlePriceChange(product: Product, price: PriceData) {
         }
 
         // Notify if hit rate is too low.
-        if (isActive && currentAvg.avg < 0.3) {
+        if (isActive && currentAvg.avg < HIT_RATE_ALERT_THRESHOLD) {
           console.log(`${(new Date()).toISOString()} low-slot-hit-rate ${product.symbol} ${currentPublisherKey} hit rate: ${(currentAvg.avg * 100).toFixed(1)}%`)
         }
       }
@@ -80,6 +91,26 @@ function handlePriceChange(product: Product, price: PriceData) {
   }
 }
 
+const publisherBalances: Record<string, number> = {}
+function handlePublisherAccountChange(key: string, info: AccountInfo<Buffer>, context: Context) {
+  // default previousBalance to the highest possible value so that you get an alert on program start
+  // if the publisher's balance is below the largest threshold.
+  let previousBalance = LOW_BALANCE_THRESHOLDS_SOL[LOW_BALANCE_THRESHOLDS_SOL.length - 1] + 1
+  if (publisherBalances[key] !== undefined) {
+    previousBalance = publisherBalances[key]
+  }
+
+  const currentBalance = info.lamports / 1000000000
+
+  const previousBalanceBin = LOW_BALANCE_THRESHOLDS_SOL.find((v) => previousBalance < v)
+  const currentBalanceBin = LOW_BALANCE_THRESHOLDS_SOL.find((v) => currentBalance < v)
+
+  if (previousBalanceBin !== currentBalanceBin) {
+    console.log(`${(new Date()).toISOString()} low-balance ${key} ${currentBalance} SOL`)
+  }
+
+  publisherBalances[key] = currentBalance
+}
 
 pythConnection.onPriceChange(handlePriceChange)
 pythConnection.start()
