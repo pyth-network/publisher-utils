@@ -67,7 +67,7 @@ function handlePriceChange(product: Product, price: PriceData) {
         // Check if the publisher updated their price since the last update. Note that publishSlot is sent by
         // publishers and represents the slot they are targeting; this check assumes they change publishSlot
         // each time they publish a new price. They're supposed to do this, though there may be rare cases where
-        // they don't (if they somehow get away from the real price).
+        // they don't (specifically, if their estimate of the slot is different from the actual slot).
         if (publisherPrice.aggregate.publishSlot !== currentAvg.slot) {
           publisherHitRateMovingAvg[currentPublisherKey][product.symbol] = {
             slot: publisherPrice.aggregate.publishSlot,
