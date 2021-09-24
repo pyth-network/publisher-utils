@@ -21,6 +21,8 @@ const connection = new Connection(
 )
 const pythConnection = new PythConnection(connection, PYTH_PROGRAM_KEY, SOLANA_CONNECTION_COMMITMENT)
 const publisherStatus: Record<string, Record<string, boolean>> = {}
+const publisherHitRateMovingAvg: Record<string, Record<string, {slot: bigint, avg: number}>> = {}
+const HIT_RATE_MOVING_AVG_MULTIPLE = 0.95
 
 function handlePriceChange(product: Product, price: PriceData) {
   for (let publisherPrice of price.priceComponents) {
@@ -28,6 +30,7 @@ function handlePriceChange(product: Product, price: PriceData) {
     if (currentPublisherKey !== undefined && (PUBLISHER_KEY === undefined || PUBLISHER_KEY === currentPublisherKey)) {
       if (!(currentPublisherKey in publisherStatus)) {
         publisherStatus[currentPublisherKey] = {}
+        publisherHitRateMovingAvg[currentPublisherKey] = {}
       }
 
       const isActive = isPublishing(price, publisherPrice)
@@ -42,6 +45,32 @@ function handlePriceChange(product: Product, price: PriceData) {
       }
 
       publisherStatus[currentPublisherKey][product.symbol] = isActive
+
+      if (publisherHitRateMovingAvg[currentPublisherKey][product.symbol] === undefined) {
+        publisherHitRateMovingAvg[currentPublisherKey][product.symbol] = {
+          slot: publisherPrice.aggregate.publishSlot,
+          avg: 1.0,
+        }
+      } else {
+        const currentAvg = publisherHitRateMovingAvg[currentPublisherKey][product.symbol]
+        // Check if the publisher updated their price since the last update. Note that publishSlot is sent by
+        // publishers and represents the slot they are targeting; this check assumes they change publishSlot
+        // each time they publish a new price. They're supposed to do this, though there may be rare cases where
+        // they don't (if they somehow get away from the real price).
+        if (publisherPrice.aggregate.publishSlot !== currentAvg.slot) {
+          publisherHitRateMovingAvg[currentPublisherKey][product.symbol] = {
+            slot: publisherPrice.aggregate.publishSlot,
+            avg: currentAvg.avg * HIT_RATE_MOVING_AVG_MULTIPLE + (1 - HIT_RATE_MOVING_AVG_MULTIPLE)
+          }
+        } else {
+          publisherHitRateMovingAvg[currentPublisherKey][product.symbol].avg = currentAvg.avg * HIT_RATE_MOVING_AVG_MULTIPLE
+        }
+
+        // Notify if hit rate is too low.
+        if (isActive && currentAvg.avg < 0.3) {
+          console.log(`${(new Date()).toISOString()} low-slot-hit-rate ${product.symbol} ${currentPublisherKey} hit rate: ${(currentAvg.avg * 100).toFixed(1)}%`)
+        }
+      }
 
       const code = checkValidity(product, price, publisherPrice)
       if (code !== undefined) {
