@@ -1,7 +1,6 @@
 import {Connection, PublicKey, clusterApiUrl, Cluster, Commitment, AccountInfo, Context} from '@solana/web3.js';
-import { PythConnection, getPythProgramKey } from './PythConnection'
 import {checkValidity, isPublishing} from "./validation";
-import {PriceData, Product} from "@pythnetwork/client";
+import {PriceData, Product, PythConnection, getPythProgramKeyForCluster} from "@pythnetwork/client";
 
 require('dotenv').config()
 
@@ -12,7 +11,7 @@ console.log(
   `Connecting to ${SOLANA_CLUSTER_URL} with commitment ${SOLANA_CONNECTION_COMMITMENT}`
 )
 
-const PYTH_PROGRAM_KEY = getPythProgramKey(SOLANA_CLUSTER_NAME)
+const PYTH_PROGRAM_KEY = getPythProgramKeyForCluster(SOLANA_CLUSTER_NAME)
 const PUBLISHER_KEY: string | undefined = process.env.PUBLISHER_KEY
 
 const connection = new Connection(

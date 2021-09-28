@@ -34,7 +34,7 @@
     "typescript": "^4.2.4"
   },
   "dependencies": {
-    "@pythnetwork/client": "^2.2.0",
+    "@pythnetwork/client": "^2.3.1",
     "@solana/web3.js": "^1.10.1",
     "assert": "^2.0.0",
     "buffer": "^6.0.1",
