@@ -5,7 +5,7 @@ import {PriceData, Product, PythConnection, getPythProgramKeyForCluster} from "@
 require('dotenv').config()
 
 const SOLANA_CLUSTER_NAME: Cluster = process.env.SOLANA_CLUSTER_NAME ? process.env.SOLANA_CLUSTER_NAME as Cluster : 'mainnet-beta'
-const SOLANA_CLUSTER_URL = clusterApiUrl(SOLANA_CLUSTER_NAME)
+const SOLANA_CLUSTER_URL = process.env.SOLANA_RPC_ENDPOINT ? process.env.SOLANA_RPC_ENDPOINT : clusterApiUrl(SOLANA_CLUSTER_NAME)
 const SOLANA_CONNECTION_COMMITMENT: Commitment = process.env.SOLANA_CONNECTION_COMMITMENT ? process.env.SOLANA_CONNECTION_COMMITMENT as Commitment : 'finalized'
 console.log(
   `Connecting to ${SOLANA_CLUSTER_URL} with commitment ${SOLANA_CONNECTION_COMMITMENT}`
