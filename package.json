@@ -1,7 +1,7 @@
 {
   "name": "@pythnetwork/publisher-utils",
   "private": true,
-  "version": "1.0",
+  "version": "1.0.0",
   "description": "Utilities for Pyth publishers for monitoring and validating their data",
   "homepage": "https://pyth.network",
   "main": "lib/index.js",
