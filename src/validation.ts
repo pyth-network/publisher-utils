@@ -4,7 +4,7 @@ export type ErrorCode = "price-deviation" | "bad-confidence" | "improbable-aggre
 
 /** Check if a published price is valid. Returns undefined if the price is ok, or an error code otherwise. */
 export function checkValidity(product: Product, price: PriceData, publisherPrice: PriceComponent): (ErrorCode | undefined) {
-  if (publisherPrice && PriceStatus[publisherPrice.aggregate.status] === 'Trading') {
+  if (publisherPrice && isPublishing(price, publisherPrice)) {
     if (publisherPrice.aggregate.confidence <= 0) {
       return "bad-confidence"
     }

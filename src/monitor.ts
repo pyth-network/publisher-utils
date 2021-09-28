@@ -44,9 +44,13 @@ function handlePriceChange(product: Product, price: PriceData) {
       }
 
       const isActive = isPublishing(price, publisherPrice)
-      const wasActive: boolean | undefined = publisherStatus[currentPublisherKey][product.symbol]
+      let wasActive: boolean | undefined = publisherStatus[currentPublisherKey][product.symbol]
+      // assume everyone starts as inactive.
+      if (wasActive === undefined) {
+        wasActive = false;
+      }
 
-      if (wasActive !== undefined && wasActive != isActive) {
+      if (wasActive != isActive) {
         if (isActive) {
           console.log(`${(new Date()).toISOString()} start-publish ${product.symbol} ${currentPublisherKey}`)
         } else {
