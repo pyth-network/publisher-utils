@@ -1,6 +1,6 @@
-import {Connection, PublicKey, clusterApiUrl, Cluster, Commitment, AccountInfo, Context} from '@solana/web3.js';
-import {checkValidity, isPublishing, PublisherPrice, Price, Validator, LowSlotHitRate} from "./validation";
-import {PriceData, Product, PythConnection, getPythProgramKeyForCluster} from "@pythnetwork/client";
+import {AccountInfo, Cluster, clusterApiUrl, Commitment, Connection, Context, PublicKey} from '@solana/web3.js';
+import {LowSlotHitRate, Price, PublisherPrice, Validator} from "./validation";
+import {getPythProgramKeyForCluster, PriceData, Product, PythConnection} from "@pythnetwork/client";
 
 require('dotenv').config()
 
@@ -76,11 +76,11 @@ function handlePriceChange(product: Product, price: PriceData) {
   }
 
   const myPrice = onChainPriceToPrice(price)
-  handlePriceChange2(product.symbol, myPrice)
+  handlePriceChangeHelper(product.symbol, myPrice)
 }
 
 const validators: Record<string, Validator> = {}
-function handlePriceChange2(symbol: string, price: Price) {
+function handlePriceChangeHelper(symbol: string, price: Price) {
   if (!(symbol in validators)) {
     validators[symbol] = new Validator(PUBLISHER_KEY)
   }
