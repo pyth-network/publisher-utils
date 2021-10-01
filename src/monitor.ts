@@ -1,5 +1,5 @@
 import {Connection, PublicKey, clusterApiUrl, Cluster, Commitment, AccountInfo, Context} from '@solana/web3.js';
-import {checkValidity, isPublishing} from "./validation";
+import {checkValidity, isPublishing, PublisherPrice, Price, Validator, LowSlotHitRate} from "./validation";
 import {PriceData, Product, PythConnection, getPythProgramKeyForCluster} from "@pythnetwork/client";
 
 require('dotenv').config()
@@ -19,77 +19,82 @@ const connection = new Connection(
   SOLANA_CONNECTION_COMMITMENT
 )
 const pythConnection = new PythConnection(connection, PYTH_PROGRAM_KEY, SOLANA_CONNECTION_COMMITMENT)
-const publisherStatus: Record<string, Record<string, boolean>> = {}
-const publisherHitRateMovingAvg: Record<string, Record<string, {slot: bigint, avg: number}>> = {}
-const HIT_RATE_MOVING_AVG_MULTIPLE = 0.95
-const HIT_RATE_ALERT_THRESHOLD = 0.3
 // The low balance alert will go off each time a wallet balance drops below one of these thresholds.
 // Must be in sorted order from low to high
 const LOW_BALANCE_THRESHOLDS_SOL=[5, 10, 25, 50, 75, 100]
 
+function onChainPriceToPrice(price: PriceData): Price {
+  const latest: Record<string, PublisherPrice> = {}
+  const aggregate: Record<string, PublisherPrice> = {}
+
+  for (let publisherPrice of price.priceComponents) {
+    if (publisherPrice.publisher !== undefined) {
+      const publisher = publisherPrice.publisher!.toString()
+      latest[publisher] = {
+        price: publisherPrice.latest.price,
+        confidence: publisherPrice.latest.confidence,
+        status: publisherPrice.latest.status,
+        slot: publisherPrice.latest.publishSlot.toString()
+      }
+      aggregate[publisher] = {
+        price: publisherPrice.aggregate.price,
+        confidence: publisherPrice.aggregate.confidence,
+        status: publisherPrice.aggregate.status,
+        slot: publisherPrice.aggregate.publishSlot.toString()
+      }
+    }
+  }
+
+  return {
+    slot: price.publishSlot.toString(),
+    quoters: latest,
+    quoter_aggregates: aggregate,
+    aggregate: {
+      price: price.price,
+      confidence: price.confidence,
+      status: price.status,
+      slot: price.publishSlot.toString()
+    },
+  }
+}
+
 function handlePriceChange(product: Product, price: PriceData) {
+  const subscribedPublishers: Record<string, boolean> = {}
   for (let publisherPrice of price.priceComponents) {
     const currentPublisherKey = publisherPrice.publisher?.toString()
     if (currentPublisherKey !== undefined && (PUBLISHER_KEY === undefined || PUBLISHER_KEY === currentPublisherKey)) {
-      if (!(currentPublisherKey in publisherStatus)) {
-        publisherStatus[currentPublisherKey] = {}
-        publisherHitRateMovingAvg[currentPublisherKey] = {}
-
-        // The first time we see a publisher, subscribe to updates on their account as well so we can track their balance.
+      // The first time we see a publisher, subscribe to updates on their account as well so we can track their balance.
+      if (!(currentPublisherKey in subscribedPublishers)) {
         connection.onAccountChange(
           new PublicKey(currentPublisherKey),
           (info, context) => handlePublisherAccountChange(currentPublisherKey, info, context),
           SOLANA_CONNECTION_COMMITMENT
         )
+        subscribedPublishers[currentPublisherKey] = true
       }
+    }
+  }
 
-      const isActive = isPublishing(price, publisherPrice)
-      let wasActive: boolean | undefined = publisherStatus[currentPublisherKey][product.symbol]
-      // assume everyone starts as inactive.
-      if (wasActive === undefined) {
-        wasActive = false;
-      }
+  const myPrice = onChainPriceToPrice(price)
+  handlePriceChange2(product.symbol, myPrice)
+}
 
-      if (wasActive != isActive) {
-        if (isActive) {
-          console.log(`${(new Date()).toISOString()} start-publish ${product.symbol} ${currentPublisherKey}`)
-        } else {
-          console.log(`${(new Date()).toISOString()} stop-publish ${product.symbol} ${currentPublisherKey}`)
-        }
-      }
+const validators: Record<string, Validator> = {}
+function handlePriceChange2(symbol: string, price: Price) {
+  if (!(symbol in validators)) {
+    validators[symbol] = new Validator(PUBLISHER_KEY)
+  }
 
-      publisherStatus[currentPublisherKey][product.symbol] = isActive
-
-      if (publisherHitRateMovingAvg[currentPublisherKey][product.symbol] === undefined) {
-        publisherHitRateMovingAvg[currentPublisherKey][product.symbol] = {
-          slot: publisherPrice.aggregate.publishSlot,
-          avg: 1.0,
-        }
-      } else {
-        const currentAvg = publisherHitRateMovingAvg[currentPublisherKey][product.symbol]
-        // Check if the publisher updated their price since the last update. Note that publishSlot is sent by
-        // publishers and represents the slot they are targeting; this check assumes they change publishSlot
-        // each time they publish a new price. They're supposed to do this, though there may be rare cases where
-        // they don't (specifically, if their estimate of the slot is different from the actual slot).
-        if (publisherPrice.aggregate.publishSlot !== currentAvg.slot) {
-          publisherHitRateMovingAvg[currentPublisherKey][product.symbol] = {
-            slot: publisherPrice.aggregate.publishSlot,
-            avg: currentAvg.avg * HIT_RATE_MOVING_AVG_MULTIPLE + (1 - HIT_RATE_MOVING_AVG_MULTIPLE)
-          }
-        } else {
-          publisherHitRateMovingAvg[currentPublisherKey][product.symbol].avg = currentAvg.avg * HIT_RATE_MOVING_AVG_MULTIPLE
-        }
-
-        // Notify if hit rate is too low.
-        if (isActive && currentAvg.avg < HIT_RATE_ALERT_THRESHOLD) {
-          console.log(`${(new Date()).toISOString()} low-slot-hit-rate ${product.symbol} ${currentPublisherKey} hit rate: ${(currentAvg.avg * 100).toFixed(1)}%`)
-        }
-      }
-
-      const code = checkValidity(product, price, publisherPrice)
-      if (code !== undefined) {
-        console.log(`${(new Date()).toISOString()} ${code} ${product.symbol} ${currentPublisherKey} aggregate: ${price.price} ± ${price.confidence} publisher: ${publisherPrice.aggregate.price} ± ${publisherPrice.aggregate.confidence}`)
-      }
+  const events = validators[symbol].addInput(price)
+  for (const event of events) {
+    if (event.code == "low-slot-hit-rate") {
+      console.log(`${(new Date()).toISOString()} ${symbol} ${event.publisher} ${event.code} hit rate: ${((event as LowSlotHitRate).hitRate * 100).toFixed(1)}%`)
+    } else if (event.code == "start-publish" || event.code == "stop-publish") {
+      console.log(`${(new Date()).toISOString()} ${symbol} ${event.publisher} ${event.code}`)
+    } else {
+      const aggregate = price.aggregate
+      const publisherPrice = price.quoter_aggregates[event.publisher]
+      console.log(`${(new Date()).toISOString()} ${symbol} ${event.publisher} ${event.code} aggregate: ${aggregate.price} ± ${aggregate.confidence} publisher: ${publisherPrice.price} ± ${publisherPrice.confidence}`)
     }
   }
 }
