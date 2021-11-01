@@ -115,6 +115,7 @@ export function checkValidity(price: Price, publisherKey: string): (ErrorCode | 
 
     // The aggregate price is far away from the quoter's price in probability terms.
     // Either the quoter's price is wrong, or their confidence interval is too small.
+    // Note that we check this condition even if the aggregate price doesn't have status=trading.
     const delta = publisherAggregate.price - price.aggregate.price;
     const ciNormalizedDelta = delta / publisherAggregate.confidence
     if (Math.abs(ciNormalizedDelta) > 20) {
