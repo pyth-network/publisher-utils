@@ -46,14 +46,14 @@ function onChainPriceToPrice(price: PriceData): Price {
   }
 
   return {
-    slot: price.publishSlot.toString(),
+    slot: price.aggregate.publishSlot.toString(),
     quoters: latest,
     quoter_aggregates: aggregate,
     aggregate: {
-      price: price.price,
-      confidence: price.confidence,
-      status: price.status,
-      slot: price.publishSlot.toString()
+      price: price.aggregate.price,
+      confidence: price.aggregate.confidence,
+      status: price.aggregate.status,
+      slot: price.aggregate.publishSlot.toString()
     },
   }
 }
