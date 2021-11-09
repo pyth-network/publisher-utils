@@ -1,7 +1,7 @@
 {
   "name": "@pythnetwork/publisher-utils",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Utilities for Pyth publishers for monitoring and validating their data",
   "homepage": "https://pyth.network",
   "main": "lib/index.js",
@@ -36,7 +36,7 @@
   },
   "dependencies": {
     "@pythnetwork/client": "^2.4.0",
-    "@solana/web3.js": "^1.10.1",
+    "@solana/web3.js": "^1.30.2",
     "assert": "^2.0.0",
     "buffer": "^6.0.1",
     "dotenv": "^10.0.0",
