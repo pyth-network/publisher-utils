@@ -16,7 +16,8 @@
     "format": "prettier --write \"src/**/*.ts\"",
     "lint": "tslint -p tsconfig.json",
     "monitor": "ts-node src/monitor.ts",
-    "validate": "ts-node src/validate_historical.ts"
+    "validate": "ts-node src/validate_historical.ts",
+    "benchmark": "ts-node src/rpc_benchmark.ts"
   },
   "keywords": [
     "pyth",
