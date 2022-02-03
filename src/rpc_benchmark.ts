@@ -1,6 +1,5 @@
-import {AccountInfo, Cluster, clusterApiUrl, Commitment, Connection, Context, PublicKey} from '@solana/web3.js';
-import {LowSlotHitRate, Price, PublisherPrice, Validator} from "./validation";
-import {getPythProgramKeyForCluster, PriceData, Product, PythConnection} from "@pythnetwork/client";
+import {Cluster, clusterApiUrl, Commitment, Connection, PublicKey} from '@solana/web3.js';
+import {getPythProgramKeyForCluster} from "@pythnetwork/client";
 
 require('dotenv').config()
 
@@ -11,27 +10,35 @@ console.log(
   `Connecting to ${SOLANA_CLUSTER_NAME} via ${SOLANA_CLUSTER_URL} with commitment ${SOLANA_CONNECTION_COMMITMENT}`
 )
 
-// const PUBLISHER_KEY: string | undefined = process.env.PUBLISHER_KEY
-
 const connection = new Connection(
   SOLANA_CLUSTER_URL,
   SOLANA_CONNECTION_COMMITMENT
 )
-// const pythConnection = new PythConnection(connection, PYTH_PROGRAM_KEY, SOLANA_CONNECTION_COMMITMENT)
 
+/** Mapping from solana clusters to the BTC/USD price account key. */
+const clusterToBtcUsd: Record<Cluster, string> = {
+  'mainnet-beta': 'GVXRSBjFk6e6J3NbVPXohDJetcTjaeeuykUpbQF8UoMU',
+  devnet: 'HovQMDrbAgAYPCmHVSrezcSmkMtXSSUsLDFANExrZh2J',
+  testnet: 'DJW6f4ZVqCnpYNN9rNuzqUcCvkVtBgixo8mq9FKSsCbJ',
+}
+
+/** Latency statistics produced by benchmarking an endpoint. */
 interface BenchmarkStats {
+  // mean / variance of latency, in milliseconds
   mean: number,
   variance: number,
   numSamples: number,
+  // 90th, 95th, and 99th percentile latencies, in milliseconds
   p90: number,
   p95: number,
   p99: number,
 }
 
-async function sleep(ms: number) {
-  return new Promise( resolve => setTimeout(resolve, ms) );
-}
-
+/**
+ * Generates load against an RPC server.
+ * When started, this will invoke `load_fn` at a rate of `queries_per_second`.
+ * Expected usage is to pass a `load_fn` that invokes an API on the RPC server.
+ */
 export class RpcLoadGenerator {
   load_fn: () => Promise<any>;
   queries_per_second: number;
@@ -43,6 +50,10 @@ export class RpcLoadGenerator {
     this.active = false;
   }
 
+  /**
+   * Start generating load. load_fn will be continuously invoked until `stop()` is called.
+   * You shouldn't await this method, as it will run forever.
+   */
   public async start() {
     if (this.queries_per_second == 0) {
       return;
@@ -55,9 +66,14 @@ export class RpcLoadGenerator {
     }
   }
 
-  public async stop() {
+  /** Stop generating load. */
+  public stop() {
     this.active = false;
   }
+}
+
+async function sleep(ms: number) {
+  return new Promise( resolve => setTimeout(resolve, ms) );
 }
 
 // Current time in microseconds
@@ -66,6 +82,10 @@ function milliTime(): number {
   return secs * 1000 + nanos / 1000000;
 }
 
+/**
+ * Invoke `method` `n` times and time how long each invocation takes.
+ * Returns summary statistics about invocation latency.
+ */
 async function benchmark(method: (() => Promise<any>), n: number): Promise<BenchmarkStats> {
   let results: number[] = []
 
@@ -78,18 +98,12 @@ async function benchmark(method: (() => Promise<any>), n: number): Promise<Bench
     let latency = end - start
     results.push(latency)
     total += latency
-
-    // sleep a bit to prevent rate limiting.
-    sleep(50);
   }
 
   let mean = total / n;
   let variance = results.map(x => (x - mean) * (x - mean)).reduce((x, y) => x + y) / n;
 
   results.sort((a, b) => a - b)
-
-  console.log(results)
-  console.log(Math.floor(0.90 * n))
 
   return {
     mean,
@@ -102,29 +116,28 @@ async function benchmark(method: (() => Promise<any>), n: number): Promise<Bench
 }
 
 async function main() {
-
   const PYTH_PROGRAM_KEY = getPythProgramKeyForCluster(SOLANA_CLUSTER_NAME);
-  const pythHttpClient = new PythHttpClient(connection, PYTH_PROGRAM_KEY, SOLANA_CONNECTION_COMMITMENT);
+  const priceAccountKey = new PublicKey(clusterToBtcUsd[SOLANA_CLUSTER_NAME]);
 
-
+  // The API calls to benchmark
   let methods = {
     'getSlot': () => connection.getSlot(),
     'getRecentBlockhash': () => connection.getRecentBlockhash(),
-    'getProgramAccounts(pyth)': () => connection.getProgramAccounts(PYTH_PROGRAM_KEY),
-
-    // TODO: get a price feed account repeatedly
-    'getAccount': () => connection.getAccountInfo(),
+    'getProgramAccounts for Pyth': () => connection.getProgramAccounts(PYTH_PROGRAM_KEY),
+    'getAccount for Pyth BTC/USD price feed': () => connection.getAccountInfo(priceAccountKey),
   }
 
+  // Benchmarking conditions. Each item is the number of queries per second we are sending while the benchmark is running.
   let load_conditions = [
     0,
-    10,
-    30,
-    50,
     100,
+    200,
+    300,
+    500,
+    1000
   ]
 
-  let benchmark_queries = 50
+  let benchmark_queries = 100
 
   // Warm up the RPC node (the first queries are usually slower)
   console.log("Warming up RPC node...")
