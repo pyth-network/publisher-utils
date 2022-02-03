@@ -16,7 +16,8 @@
     "format": "prettier --write \"src/**/*.ts\"",
     "lint": "tslint -p tsconfig.json",
     "monitor": "ts-node src/monitor.ts",
-    "validate": "ts-node src/validate_historical.ts"
+    "validate": "ts-node src/validate_historical.ts",
+    "benchmark": "ts-node src/rpc_benchmark.ts"
   },
   "keywords": [
     "pyth",
@@ -35,7 +36,7 @@
     "typescript": "^4.2.4"
   },
   "dependencies": {
-    "@pythnetwork/client": "^2.4.0",
+    "@pythnetwork/client": "^2.5.3",
     "@solana/web3.js": "^1.30.2",
     "assert": "^2.0.0",
     "buffer": "^6.0.1",
