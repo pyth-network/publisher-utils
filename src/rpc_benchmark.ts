@@ -115,6 +115,16 @@ async function benchmark(method: (() => Promise<any>), n: number): Promise<Bench
   };
 }
 
+async function slotSequence(n: number): Promise<number[]> {
+  let results: number[] = [];
+  for (let i = 0; i < n; i++) {
+    let slot = await connection.getSlot();
+    results.push(slot);
+  }
+
+  return results;
+}
+
 async function main() {
   const PYTH_PROGRAM_KEY = getPythProgramKeyForCluster(SOLANA_CLUSTER_NAME);
   const priceAccountKey = new PublicKey(clusterToBtcUsd[SOLANA_CLUSTER_NAME]);
@@ -143,6 +153,22 @@ async function main() {
   console.log("Warming up RPC node...")
   await benchmark(() => connection.getSlot(), 5);
 
+  console.log("Running sanity checks...")
+  // Check that getSlot is always incrementing
+  let slots = await slotSequence(100);
+  let inversions = 0;
+  for (let i = 0; i < slots.length - 1; i++) {
+    if (slots[i] > slots[i + 1]) {
+      inversions += 1;
+    }
+  }
+  if (inversions > 0) {
+    console.log(`❌ getSlot sometimes returns an earlier slot. # of inversions: ${inversions}`);
+  } else {
+    console.log("✅ getSlot returns a nondecreasing sequence of slots");
+  }
+
+  console.log("Running load test...")
   for (let i = 0; i < load_conditions.length; i++) {
     let qps = load_conditions[i];
     console.log(`Testing at ${qps} queries per second`)
