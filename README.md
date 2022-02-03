@@ -56,6 +56,9 @@ Example output from the program is as follows:
 
 ```
 Warming up RPC node...
+Running sanity checks...
+✅ getSlot returns a nondecreasing sequence of slots
+Running load test...
 Testing at 0 queries per second
   getSlot: 47.7 ± 6.5 ms p90: 58.0 p95: 60.6 p99: 70.4
   getRecentBlockhash: 69.1 ± 54.8 ms p90: 164.5 p95: 181.5 p99: 338.9
@@ -74,4 +77,6 @@ Testing at 200 queries per second
   getAccount for Pyth BTC/USD price feed: 47.8 ± 16.8 ms p90: 59.5 p95: 64.9 p99: 167.0
 ```
 
-This output shows how average and tail latency of each API call grows as load increases.
+The first phase of the program runs basic sanity checks on the RPC node.
+At the moment, the only check is that repeated calls to `getSlot` never return an earlier slot than the previous call.   
+The second load testing phase shows how average and tail latency of each API call grows as load increases.
